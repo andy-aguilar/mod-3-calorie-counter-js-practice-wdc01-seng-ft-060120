@@ -1,12 +1,12 @@
 // your code here, it may be worth it to ensure this file only runs AFTER the dom has loaded.
 const BASEURL = "http://localhost:3000//api/v1/calorie_entries"
-
+const editCalorieForm = () => document.getElementById("edit-calorie-form")
 document.addEventListener("DOMContentLoaded", (e) => {
     const bmrForm = document.getElementById("bmr-calulator");
     const progressBar = document.querySelector(".uk-progress")
     const caloriesUl = document.getElementById("calories-list")
     const newCalorieForm = document.getElementById("new-calorie-form")
-    const editCalorieForm = document.getElementById("edit-calorie-form")
+    
 
     bmrForm.addEventListener("submit", (e) => {
         e.preventDefault()
@@ -24,9 +24,11 @@ document.addEventListener("DOMContentLoaded", (e) => {
         
     })
 
-    editCalorieForm.addEventListener("submit", (e) => {
+    editCalorieForm().addEventListener("submit", (e) => {
         e.preventDefault()
-        console.log(e.target)
+        console.log(e.target.calories.value)
+        console.log(e.target.notes.value)
+        updateEntry(e.target)
     })
 
     newCalorieForm.addEventListener("submit", (e) => {
@@ -71,6 +73,32 @@ document.addEventListener("DOMContentLoaded", (e) => {
         })
     }
 
+    const updateEntry = (form) => {
+        const entryObj = {
+            calorie: form.calories.value,
+            note: form.notes.value
+        }
+    
+        const configEntry = {
+            method: "PATCH", 
+    
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+    
+            body: JSON.stringify(entryObj)
+        }
+        fetch(`${BASEURL}/${form.dataset.id}`, configEntry)
+        .then(resp => resp.json())
+        .then(entry => {
+            const oldLi = caloriesUl.querySelector(`[data-id='${entry.id}']`)
+            oldLi.remove()
+            renderCalorieEntry(entry)
+            form.reset()
+        })
+    }
+
     const renderCalorieEntry = (entry) => {
         const entryLi = document.createElement("li");
         entryLi.className = "calories-list-item";
@@ -90,10 +118,14 @@ document.addEventListener("DOMContentLoaded", (e) => {
                 <a class="delete-button" uk-icon="icon: trash"></a>
             </div>
         `;
-        caloriesUl.appendChild(entryLi);
+        caloriesUl.prepend(entryLi);
         const deleteButton = entryLi.querySelector(".delete-button")
         deleteButton.addEventListener("click", (e) => {
             deleteCalorieEntry(entry, entryLi, progressBar)
+        })
+        const editButton = entryLi.querySelector(".edit-button")
+        editButton.addEventListener("click", (e) => {
+            populateEditForm(entry)
         })
         progressBar.value += entry.calorie
     }
@@ -112,6 +144,12 @@ const calculateHigh = (weight, height, age) => {
     return Math.round(BMR)
 }
 
+const populateEditForm = (entry) => {
+    editCalorieForm().calories.value = entry.calorie;
+    editCalorieForm().notes.value = entry.note;
+    editCalorieForm().dataset.id = entry.id
+}
+
 const deleteCalorieEntry = (entry, li, progressBar) => {
     const calorieEntryConfig = {
         method: "DELETE",
@@ -125,25 +163,8 @@ const deleteCalorieEntry = (entry, li, progressBar) => {
     fetch(`${BASEURL}/${entry.id}`, calorieEntryConfig)
     .then(resp => resp.json())
     .then(entry => {
-        progressBar.value -= entry.calorie
+        progressBar.value -= entry.calorie;
         li.remove()
     })
 }
 
-
-
-/* <li class="calories-list-item">
-    <div class="uk-grid">
-        <div class="uk-width-1-6">
-            <strong>400</strong>
-            <span>kcal</span>
-        </div>
-        <div class="uk-width-4-5">
-            <em class="uk-text-meta">Lorem ipsum dolores, some other filler text that I cannot rememeber the rest of...</em>
-        </div>
-    </div>
-    <div class="list-item-menu">
-        <a class="edit-button" uk-icon="icon: pencil" uk-toggle="target: #edit-form-container"></a>
-        <a class="delete-button" uk-icon="icon: trash"></a>
-    </div>
-</li> */
